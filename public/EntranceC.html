@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+<body>
+    <div class="w3-row">
+        <div class="w3-col l4 w3-padding">
+            
+            <form class="w3-container w3-padding" id="jsonForm">
+                <label for="name">Age Group:</label>
+                <input class="w3-input" type="text" name="AgeGroup" id="AgeGroup"  required>
+                <label for="name">Weekday:</label>
+                <input class="w3-input" type="text" name="Weekday" id="Weekday" required>
+                <label for="name">Hour:</label>
+                <input class="w3-input" type="number" name="Hour" id="Hour" required>
+                <label for="name">Discount:</label>
+                <input class="w3-input" type="text" name="Discount" id="Discount" required>
+
+                <button class="w3-input w3-button w3-green" type="submit">Save data</button>
+                <br>
+                <button class="w3-input w3-button w3-blue" type="button" id="consultar">Consult all data</button>
+                <br>
+                <label for="name">Enter the name to delete the data:</label>
+                <input type="text" id="ticketNumberInput" placeholder="Enter the number of the ticket">
+                <button class="w3-input w3-button w3-red" type="button" id="Delete">Delete data</button>
+            </form>
+
+           <div id="updateUserFormContainer" style="display:none;">
+            <form id="updateticketForm" class="w3-container w3-padding">
+                <label for="TicketNumber">Ticket Number:</label>
+                <input class="w3-input" type="text" id="TicketNumber" required readonly>
+                <label for="updateAgeGroup">Age Group:</label>
+                <input class="w3-input" type="text" id="updateAgeGroup" required>
+                <label for="updateWeekday">Weekday:</label>
+                <input class="w3-input" type="text" id="updateWeekday" required>
+                <label for="updateHour">Hour:</label>
+                <input class="w3-input" type="number" id="updateHour" required>
+                <label for="updateDiscount">Discount:</label>
+                <input class="w3-input" type="text" id="updateDiscount" required>
+                <button class="w3-input w3-button w3-yellow" type="submit">Update Ticket</button>
+            </form>
+        </div>
+        <button class="w3-input w3-button w3-orange" type="button" id="showUpdateFormBtn">Update Ticket</button>
+            
+        </div>
+        <div class="w3-col l8">
+            <table class="w3-table">
+                <thead>
+                    <tr>
+                        <th>Ticket Number</th>
+                        <th>Age Group</th>
+                        <th>Weekday</th>
+                        <th>Hour</th>
+                        <th>Discount</th>
+                    </tr>
+                </thead>
+                <tbody id="tdatos"></tbody>
+            </table>
+        </div>
+    </div>
+    
+</body>
+<script>
+    document.getElementById('jsonForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        //const name = document.getElementById('name').value;
+        const form = document.getElementById('jsonForm');
+        const formData = new FormData(form);
+        const jsonData = JSON.stringify(Object.fromEntries(formData));
+        fetch('/EntranceC/insert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: jsonData
+        })
+        .then(response => response.text())
+        .then(data => alert(data))
+        .catch(error => console.error('Error:', error));
+    });
+    document.getElementById('consultar').addEventListener('click', function(event) {
+        event.preventDefault()
+        fetch('/EntranceC/getAll')
+        .then(response => response.json())
+        .then(data => {
+            let h=``
+            data.map(d=>{
+                h+=`<tr>
+                    <td>${d.TicketNumber}</td>
+                    <td>${d.AgeGroup}</td>
+                    <td>${d.Weekday}</td>
+                    <td>${d.Hour}</td>
+                    <td>${d.Discount}</td>
+                    <td><button class="w3-button w3-yellow" onclick="loadUpdateForm(${d.TicketNumber})">Edit</button></td>
+                    </tr>
+                `
+            })
+            document.getElementById("tdatos").innerHTML=h
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    document.getElementById('Delete').addEventListener('click', function (event) {
+    event.preventDefault();
+
+    const ticketNumber = document.getElementById('ticketNumberInput').value; // Obtén el TicketNumber del input
+
+    if (!ticketNumber) {
+        alert('Por favor, ingresa un número de ticket válido.');
+        return;
+    }
+
+    // Confirmación antes de eliminar
+    const isConfirmed = confirm(`¿Estás seguro de que deseas eliminar el ticket con el número ${ticketNumber}?`);
+    if (!isConfirmed) {
+        return;  // Si el usuario cancela, no se elimina
+    }
+
+    // Hacer la solicitud DELETE
+    fetch(`/EntranceC/delete/${ticketNumber}`, {
+        method: 'DELETE',
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al eliminar el ticket');
+            }
+            return response.text();
+        })
+        .then(message => {
+            alert(message); // Muestra el mensaje del servidor
+        })
+        .catch(error => {
+            console.error(error);
+            alert('No se pudo eliminar el ticket.');
+        });
+
+    });
+    document.getElementById('showUpdateFormBtn').addEventListener('click', function() {
+    const formContainer = document.getElementById('updateUserFormContainer');
+    formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none'; // Alternar visibilidad
+});
+
+        // Cargar los datos para actualización
+        function loadUpdateForm(TicketNumber) {
+            console.log("Loading customer with id: " + TicketNumber);
+            fetch(`/EntranceC/${TicketNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Rellenar los campos del formulario con los datos del usuario
+                    document.getElementById('TicketNumber').value = data.TicketNumber;
+                    document.getElementById('updateAgeGroup').value = data.AgeGroup;
+                    document.getElementById('updateWeekday').value = data.Weekday;
+                    document.getElementById('updateHour').value = data.Hour;
+                    document.getElementById('updateDiscount').value = data.Discount;
+                    document.getElementById('updateUserFormContainer').style.display = 'block'; // Mostrar formulario de actualización
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('No se pudieron cargar los datos del usuario.');
+                });
+        }
+
+        // Actualizar los datos del usuario
+        document.getElementById('updateticketForm').addEventListener('submit', function(event) {
+    event.preventDefault();  // Prevenir el comportamiento predeterminado de envío del formulario
+    const TicketNumber = document.getElementById('TicketNumber').value;
+    const AgeGroup = document.getElementById('updateAgeGroup').value;
+    const Weekday = document.getElementById('updateWeekday').value;
+    const Hour = document.getElementById('updateHour').value;
+    const Discount = document.getElementById('updateDiscount').value;
+
+    console.log('Datos enviados:', { TicketNumber, AgeGroup, Weekday, Hour, Discount });
+
+    if (!AgeGroup || !Weekday || !Hour || !Discount) {
+        alert('Todos los campos son obligatorios.');
+        return;
+    }
+
+    fetch(`/EntranceC/update/${TicketNumber}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ AgeGroup, Weekday, Hour, Discount })
+    })
+    .then(response => response.json())  // Cambiar a .json() si el servidor responde en formato JSON
+    .then(data => {
+        console.log('Respuesta del servidor:', data); // Depuración de la respuesta
+        alert(data.message);  // Muestra el mensaje de éxito
+        document.getElementById('updateUserFormContainer').style.display = 'none';  // Ocultar formulario de actualización después de enviar
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('No se pudo actualizar el ticket.');
+    });
+});
+
+</script>
+</html>

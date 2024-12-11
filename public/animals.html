@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animals Management</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+<body>
+    <div class="w3-row">
+        <div class="w3-col l4 w3-padding">
+            <!-- Formulario para insertar un nuevo animal -->
+            <form class="w3-container w3-padding" id="jsonForm">
+                <label for="nameAnim">Name:</label>
+                <input class="w3-input" type="text" name="nameAnim" id="nameAnim" required>
+                <label for="age">Age:</label>
+                <input class="w3-input" type="number" name="age" id="age" required>                
+                <label for="gender">Gender:</label>
+                <input class="w3-input" type="text" name="gender" id="gender" required>
+                <label for="specie">Specie:</label>
+                <input class="w3-input" type="text" name="specie" id="specie" required>
+
+                <button class="w3-input w3-button w3-green" type="submit">Save data</button>
+                <br>
+                <button class="w3-input w3-button w3-blue" type="button" id="View data">Consult all data</button>
+                <br>
+
+                <!-- Campo para eliminar un animal -->
+                <label for="nameAnimInput">Enter the name to delete the data:</label>
+                <input type="text" id="nameAnimInput" placeholder="Enter the name of the animal">
+                <button class="w3-input w3-button w3-red" type="button" id="Delete">Delete data</button>
+            </form>
+
+           <!-- Formulario de actualización -->
+           <div id="updateUserFormContainer" style="display:none;">
+            <form id="updateAnimalForm" class="w3-container w3-padding">
+                <label for="idChip">Chip ID:</label>
+                <input class="w3-input" type="text" id="idChip" required readonly>
+                <label for="updateNameAnim">Name:</label>
+                <input class="w3-input" type="text" id="updateNameAnim" required>
+                <label for="updateage">Age:</label>
+                <input class="w3-input" type="number" id="updateage" required>
+                <label for="updategender">Gender:</label>
+                <input class="w3-input" type="text" id="updategender" required>
+                <label for="updatespecie">Specie:</label>
+                <input class="w3-input" type="text" id="updatespecie" required>
+                <button class="w3-input w3-button w3-yellow" type="submit">Update Animal</button>
+            </form>
+        </div>
+        <button class="w3-input w3-button w3-orange" type="button" id="showUpdateFormBtn">Update Animal</button>
+        </div>
+        <div class="w3-col l8">
+            <table class="w3-table">
+                <thead>
+                    <tr>
+                        <th>Chip ID</th>
+                        <th>Animal Name</th>
+                        <th>Age</th>
+                        <th>Gender</th>
+                        <th>Specie</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tdatos"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Insertar un nuevo animal
+        document.getElementById('jsonForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const form = document.getElementById('jsonForm');
+            const formData = new FormData(form);
+            const jsonData = JSON.stringify(Object.fromEntries(formData));
+            fetch('/animals/insert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: jsonData
+            })
+            .then(response => response.text())
+            .then(data => alert(data))
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Consultar todos los datos de animales
+        document.getElementById('View data').addEventListener('click', function(event) {
+            event.preventDefault();
+            fetch('/animals/getAll')
+            .then(response => response.json())
+            .then(data => {
+                let h = '';
+                data.forEach(d => {
+                    h += `<tr>
+                        <td>${d.idChip}</td>
+                        <td>${d.nameAnim}</td>
+                        <td>${d.age}</td>
+                        <td>${d.gender}</td>
+                        <td>${d.specie}</td>
+                        <td><button class="w3-button w3-yellow" onclick="loadUpdateForm(${d.idChip})">Edit</button></td>
+                    </tr>`;
+                });
+                document.getElementById("tdatos").innerHTML = h;
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Eliminar un animal
+        document.getElementById('Delete').addEventListener('click', function(event) {
+            event.preventDefault();
+            const nameAnim = document.getElementById('nameAnimInput').value;
+            if (!nameAnim) {
+                alert('Por favor, ingresa un nombre válido.');
+                return;
+            }
+
+            const confirmation = confirm(`¿Estás seguro de que deseas eliminar al animal con el nombre "${nameAnim}"?`);
+            if (!confirmation) {
+                alert('Eliminación cancelada.');
+                return;
+            }
+
+            fetch(`/animals/delete/${nameAnim}`, { method: 'DELETE' })
+                .then(response => response.text())
+                .then(message => alert(message))
+                .catch(error => {
+                    console.error(error);
+                    alert('No se pudo eliminar el animal.');
+                });
+        });
+
+        document.getElementById('showUpdateFormBtn').addEventListener('click', function() {
+        const formContainer = document.getElementById('updateUserFormContainer');
+        formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none'; // Alternar visibilidad
+    });
+
+    function loadUpdateForm(idChip) {
+    console.log("Loading animal with id: " + idChip);
+    fetch(`/animals/${idChip}`) // Aquí debes tener un endpoint que devuelva los datos del animal según el idChip
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Rellenar los campos del formulario con los datos del animal
+        document.getElementById('idChip').value = data.idChip;
+        document.getElementById('updateNameAnim').value = data.nameAnim;
+        document.getElementById('updateage').value = data.age;
+        document.getElementById('updategender').value = data.gender;  // Arreglo de gender
+        document.getElementById('updatespecie').value = data.specie;
+        document.getElementById('updateUserFormContainer').style.display = 'block'; // Mostrar formulario de actualización
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('No se pudieron cargar los datos del usuario');
+    });
+}
+    // Actualizar los datos del usuario
+    document.getElementById('updateUserForm').addEventListener('submit', function(event) {
+    event.preventDefault();  // Prevenir el comportamiento predeterminado de envío del formulario
+    const TicketNumber = document.getElementById('TicketNumber').value;
+    const AgeGroup = document.getElementById('updateAgeGroup').value;
+    const Weekday = document.getElementById('updateWeekday').value;
+    const Hour = document.getElementById('updateHour').value;
+    const Discount = document.getElementById('updateDiscount').value;
+
+    console.log('Datos enviados:', { TicketNumber, AgeGroup, Weekday, Hour, Discount });
+
+    if (!AgeGroup || !Weekday || !Hour || !Discount) {
+        alert('Todos los campos son obligatorios.');
+        return;
+    }
+
+    fetch(`/EntranceC/update/${TicketNumber}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ AgeGroup, Weekday, Hour, Discount })
+    })
+    .then(response => response.text())  // Cambiar a .text() si el servidor responde en texto
+    .then(data => {
+        console.log('Respuesta del servidor:', data); // Depuración de la respuesta
+        alert(data);  // Muestra el mensaje de éxito
+        document.getElementById('updateUserFormContainer').style.display = 'none';  // Ocultar formulario de actualización después de enviar
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('No se pudo actualizar el ticket.');
+    });
+});
+
+
+    </script>
+</body>
+</html>

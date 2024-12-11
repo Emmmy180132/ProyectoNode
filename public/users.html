@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+<body>
+    <div class="w3-row">
+        <div class="w3-col l4 w3-padding">
+            
+            <form class="w3-container w3-padding" id="jsonForm">
+                <label for="name">name:</label>
+                <input class="w3-input" type="text" name="nameEmployee" id="nameEmployee" required>
+                <label for="name">username:</label>
+                <input class="w3-input" type="text" name="username" id="username" required>                
+                <label for="name">Age:</label>
+                <input class="w3-input" type="number" name="age" id="age" required min="18" max="60">
+                <label for="name">Gender:</label>
+                <input class="w3-input" type="text" name="gender" id="gender" required>
+
+                <button class="w3-input w3-button w3-green" type="submit">Save data</button>
+                <br>
+                <button class="w3-input w3-button w3-blue" type="button" id="consultar">Consult all data</button>
+                <br>
+                <label for="name">Enter the name to delete the data:</label>
+                <input type="text" id="usernameInput" placeholder="Enter the username of the employee">
+                <button class="w3-input w3-button w3-red" type="button" id="Delete">Delete data</button>
+
+            </form>
+
+            <!-- Formulario de actualización -->
+            <div id="updateUserFormContainer" style="display:none;">
+                <form id="updateUserForm" class="w3-container w3-padding">
+                    <label for="idEmployee">ID Employee:</label>
+                    <input class="w3-input" type="text" id="idEmployee" required readonly>
+                    <label for="updateNameEmployee">Name:</label>
+                    <input class="w3-input" type="text" id="updateNameEmployee" required>
+                    <label for="updateUsername">Username:</label>
+                    <input class="w3-input" type="text" id="updateUsername" required>
+                    <label for="updateAge">Age:</label>
+                    <input class="w3-input" type="number" id="updateAge" required min="18" max="60">
+                    <label for="updateGender">Gender:</label>
+                    <input class="w3-input" type="text" id="updateGender" required>
+                    <button class="w3-input w3-button w3-yellow" type="submit">Update User</button>
+                </form>
+            </div>
+            <button class="w3-input w3-button w3-orange" type="button" id="showUpdateFormBtn">Update User</button>
+
+        </div>
+        <div class="w3-col l8">
+            <table class="w3-table">
+                <thead>
+                    <tr>
+                        <th>Id Employee</th>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Age</th>
+                        <th>Gender</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tdatos"></tbody>
+            </table>
+        </div>
+    </div>
+    
+</body>
+<script>
+    // Mostrar el formulario de actualización cuando se hace clic en "Update User"
+    document.getElementById('showUpdateFormBtn').addEventListener('click', function() {
+        const formContainer = document.getElementById('updateUserFormContainer');
+        formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none'; // Alternar visibilidad
+    });
+
+    // Obtener todos los usuarios
+    document.getElementById('consultar').addEventListener('click', function(event) {
+        event.preventDefault();
+        fetch('/users/getAll')
+        .then(response => response.json())
+        .then(data => {
+            let h = ``;
+            data.map(d => {
+                h += `<tr>
+                    <td>${d.idEmployee}</td>
+                    <td>${d.nameEmployee}</td>
+                    <td>${d.username}</td>
+                    <td>${d.gender}</td>
+                    <td>${d.age}</td>
+                    <td><button class="w3-button w3-orange" onclick="loadUpdateForm(${d.idEmployee})">Edit</button></td>
+                </tr>`;
+            });
+            document.getElementById("tdatos").innerHTML = h;
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    // Cargar los datos del usuario en el formulario de actualización
+    function loadUpdateForm(idEmployee) {
+        console.log("Loading user with id: " + idEmployee);
+        fetch(`/users/${idEmployee}`) // Aquí debes tener un endpoint que devuelva los datos del usuario según el idEmployee
+        .then(response => response.json())
+        .then(data => {
+            // Rellenar los campos del formulario con los datos del usuario
+            document.getElementById('idEmployee').value = data.idEmployee;
+            document.getElementById('updateNameEmployee').value = data.nameEmployee;
+            document.getElementById('updateUsername').value = data.username;
+            document.getElementById('updateAge').value = data.age;
+            document.getElementById('updateGender').value = data.gender;
+            document.getElementById('updateUserFormContainer').style.display = 'block'; // Mostrar formulario de actualización
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('No se pudieron cargar los datos del usuario.');
+        });
+    }
+
+    // Actualizar los datos del usuario
+    document.getElementById('updateUserForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const idEmployee = document.getElementById('idEmployee').value;
+        const nameEmployee = document.getElementById('updateNameEmployee').value;
+        const username = document.getElementById('updateUsername').value;
+        const age = document.getElementById('updateAge').value;
+        const gender = document.getElementById('updateGender').value;
+
+        if (!nameEmployee || !username || !age || !gender) {
+            alert('Todos los campos son obligatorios.');
+            return;
+        }
+
+        fetch(`/users/update/${idEmployee}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nameEmployee, username, age, gender })
+        })
+        .then(response => response.text())
+        .then(data => {
+            alert(data); // Muestra el mensaje de éxito
+            document.getElementById('updateUserFormContainer').style.display = 'none'; // Ocultar formulario de actualización después de enviar
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('No se pudo actualizar el usuario');
+        });
+    });
+
+    // Eliminar usuario
+    document.getElementById('Delete').addEventListener('click', function (event) {
+        event.preventDefault();
+        const username = document.getElementById('usernameInput').value;
+
+        if (!username) {
+            alert('Por favor, ingresa un username válido.');
+            return;
+        }
+
+        const confirmation = confirm(`¿Estás seguro de eliminar al usuario con username: ${username}?`);
+        if (!confirmation) return;
+
+        fetch(`/users/delete/${username}`, {
+            method: 'DELETE',
+        })
+        .then(response => response.text())
+        .then(message => alert(message))
+        .catch(error => {
+            console.error(error);
+            alert('No se pudo eliminar el usuario.');
+        });
+    });
+</script>
+</html>
